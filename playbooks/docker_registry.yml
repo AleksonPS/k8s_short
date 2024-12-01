@@ -1,0 +1,118 @@
+---
+- name: Install Docker Registry and Docker Compose
+  hosts: srvserv
+  vars_files:
+    - ../vars/vars_manual.yml  # Include the variables file
+  become: yes
+
+  vars:
+    # Путь до сертификатов
+    cert_file: "{{ cert_path }}/domain.crt"
+    key_file: "{{ cert_path }}/domain.key"
+
+  tasks:
+    - name: Ensure Docker is installed
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Install dependencies for Docker Compose
+      apt:
+        name: 
+          - curl
+          - jq
+        state: present
+
+    - name: Download Docker Compose binary
+      get_url:
+        url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Verify Docker Compose installation
+      shell: docker-compose --version
+      register: compose_check
+      changed_when: false
+
+    - name: Print Docker Compose version
+      debug:
+        msg: "Docker Compose version: {{ compose_check.stdout }}"
+
+    - name: Pull Docker Registry image
+      command: docker pull registry:2
+
+    - name: Create a directory for Docker Registry data
+      file:
+        path: /var/lib/registry
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create a directory for certificates
+      file:
+        path: /cert
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Copy SSL certificate
+      copy:
+        src: "{{ cert_file }}"
+        dest: /cert/domain.crt
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copy SSL private key
+      copy:
+        src: "{{ key_file }}"
+        dest: /cert/domain.key
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Create directory for Docker Registry configuration
+      file:
+        path: /etc/docker/registry
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+    
+    - name: Create configuration file for Docker Registry
+      template:
+        src: ../templates/config_registry.yml
+        dest: /etc/docker/registry/config.yml
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Run Docker Registry container with custom configuration
+      docker_container:
+        name: registry
+        image: registry:2
+        state: started
+        restart_policy: always
+        ports:
+          - "5000:5000"
+        volumes:
+          - /var/lib/registry:/var/lib/registry
+          - /cert:/certs
+          - /etc/docker/registry/config.yml:/etc/docker/registry/config.yml
+        env:
+          REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
+          REGISTRY_HTTP_TLS_KEY: /certs/domain.key
+
+    - name: Verify Docker Registry is running
+      shell: |
+        curl -s http://localhost:5000/v2/ || echo "Docker Registry is not reachable"
+      register: registry_check
+      failed_when: "'Docker Registry is not reachable' in registry_check.stdout"
+      changed_when: false
+
+    - name: Print Docker Registry status
+      debug:
+        msg: "Docker Registry is running and accessible at https://{{ ansible_host }}:5000"

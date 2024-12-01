@@ -1,0 +1,74 @@
+---
+- name: Fetch admin.conf from master-1
+  hosts: master
+  vars_files:
+    - ../vars/vars.yml  # Include the variables file
+  tasks:
+    - name: Ensure local artifacts directory exists
+      local_action:
+        module: file
+        path: /home/alps/proj/k8_short
+        state: directory
+        mode: '0755'
+      become: false  # Avoid sudo for this local task
+
+    - name: Fetch admin.conf from master-1
+      fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: ../admin_master-1.conf
+        flat: yes
+        
+    #- name: Wait for the file to be created
+    #  pause:
+    #    seconds: 2
+    - name: Wait until kubeconfig file exists
+      ansible.builtin.wait_for:
+        path: ../admin_master-1.conf
+        timeout: 5
+      delegate_to: localhost
+      become: false
+        
+    - name: Replace server address in kubeconfig
+      lineinfile:
+        path: ../admin_master-1.conf
+        regexp: '^    server: https://{{ master_local_ip }}:6443'
+        line: '    server: https://{{ external_ip }}:6443'
+        backrefs: yes
+      delegate_to: localhost
+      become: false
+    
+    - name: Export KUBECONFIG environment variable locally
+      local_action: 
+        module: shell
+        cmd: "export KUBECONFIG=$PWD/admin_master-1.conf"
+      environment:
+        KUBECONFIG: "/home/alps/proj/k8_short/admin_master-1.conf"
+      become: false
+      
+    - name: Persist KUBECONFIG in shell profile
+      lineinfile:
+        path: ~/.bashrc
+        line: 'export KUBECONFIG={{ project_folder }}/admin_master-1.conf'
+        state: present
+        create: true
+      delegate_to: localhost
+      become: false
+    
+    - name: Reload the shell profile
+      #command: bash -c 'source ~/.bashrc'
+      #delegate_to: localhost
+      #become: false
+      ansible.builtin.shell: |
+        source ~/.bashrc
+      args:
+        executable: /bin/bash
+      delegate_to: localhost
+      become: false
+      
+    - name: Create KUBE_CONFIG for github action
+      ansible.builtin.shell: |
+        cat ../admin_master-1.conf | base64 > ../kube_config64_for_github_action
+      args:
+        executable: /bin/bash
+      delegate_to: localhost
+      become: false

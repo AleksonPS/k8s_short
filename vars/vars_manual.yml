@@ -1,0 +1,3 @@
+cert_path: /home/alps/certs #по указанному пути должны быть сформированы ключ и сертификат
+#команда для формирования: openssl req -newkey rsa:4096 -nodes -sha256 -keyout domain.key -x509 -days 365 -out domain.crt
+helm_version: v3.10.3

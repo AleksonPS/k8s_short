@@ -1,4 +1,4 @@
-- hosts: all
+- hosts: master,workers
   become: yes
   tasks:
     - fail:
@@ -53,9 +53,15 @@
     - name: apply sysctl params without reboot
       command: sysctl --system
 
-    - name: install APT Transport HTTPS
-      apt:
-        name: apt-transport-https
+    - name: Installing Prerequisites for Kubernetes
+      apt: 
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - vim
+          - software-properties-common
         state: present
 
     - name: add Docker apt-key

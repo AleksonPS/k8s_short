@@ -1,0 +1,14 @@
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /var/lib/registry
+http:
+  addr: :5000
+  tls:
+    certificate: /certs/domain.crt
+    key: /certs/domain.key
