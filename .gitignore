@@ -1,5 +1,5 @@
 hosts
-keystone_rc.sh
+*.deb
 *.log
 /log[s]
 *.retry
