@@ -1,25 +1,41 @@
 ---
-- hosts: all
-  become: yes
+- name: Install Grafana Enterprise from local .deb package
+  hosts: srvserv  # Use your target host
+  become: true
   tasks:
-    - name: Add Grafana GPG key
-      apt_key:
-        url: https://packages.grafana.com/gpg.key
-        state: present
-
-    - name: Add Grafana repository
-      apt_repository:
-        repo: 'deb https://packages.grafana.com/oss/deb stable main'
+    - name: Install required dependencies
+      apt:
+        name:
+          - adduser
+          - libfontconfig1
+          - musl
         state: present
         update_cache: yes
 
-    - name: Install Grafana
+    - name: Copy the local .deb file to the server
+      copy:
+        src: ../grafana-enterprise_11.3.1_amd64.deb  # Relative path to the .deb file
+        dest: /tmp/grafana-enterprise_11.3.1_amd64.deb
+        mode: '0644'
+
+    - name: Install Grafana Enterprise package
       apt:
-        name: grafana
-        state: latest
+        deb: /tmp/grafana-enterprise_11.3.1_amd64.deb
 
     - name: Start and enable Grafana service
       systemd:
         name: grafana-server
         state: started
         enabled: yes
+
+    - name: Open port 3000 in the firewall
+      ufw:
+        rule: allow
+        port: '3000'
+        proto: tcp
+        state: enabled
+
+    - name: Restart Grafana server to apply changes
+      systemd:
+        name: grafana-server
+        state: restarted
