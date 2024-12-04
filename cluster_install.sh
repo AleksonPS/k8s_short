@@ -43,10 +43,8 @@ ANSIBLE_FORCE_COLOR=1 ansible-playbook -i inventory_pw.ini --become --user=alps 
 printf "\e[32mЗапускаем containerd.yml\e[0m\n"
 ANSIBLE_FORCE_COLOR=1 ansible-playbook -i inventory_pw.ini --become --user=alps ./playbooks/containerd.yml --private-key=~/.ssh/YaCloudVMs
 
-#установка 
 printf "\e[32mЗапускаем fluentd_install.yaml\e[0m\n"
 ansible-playbook -i inventory_pw.ini --become --user=alps playbooks/fluentd_install.yml --private-key=~/.ssh/YaCloudVMs
-
 
 printf "\e[32mЗапускаем change_alerts.sh. Подготавливаем конфигурацию для правил alert.\e[0m\n"
 ./scripts/change_alerts.sh
@@ -58,7 +56,7 @@ ANSIBLE_FORCE_COLOR=1 ansible-playbook -i inventory_pw.ini --become --user=alps 
 printf "\e[32mЗапускаем blackbox.yaml\e[0m\n"
 ansible-playbook -i inventory_pw.ini --become --user=alps playbooks/blackbox.yml --private-key=~/.ssh/YaCloudVMs
 
-#установка Grafana (ломает машину через некоторое время)
+#установка Grafana
 printf "\e[32mЗапускаем grafana_install.yml\e[0m\n"
 ANSIBLE_FORCE_COLOR=1 ansible-playbook -i inventory_pw.ini --become --user=alps ./playbooks/grafana_install.yml --private-key=~/.ssh/YaCloudVMs
 
