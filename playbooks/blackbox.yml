@@ -1,0 +1,93 @@
+---
+- name: Install Blackbox Exporter
+  hosts: srvserv
+  become: yes
+  tasks:
+    - name: Download Blackbox Exporter tar.gz
+      get_url:
+        url: https://github.com/prometheus/blackbox_exporter/releases/download/v0.14.0/blackbox_exporter-0.14.0.linux-amd64.tar.gz
+        dest: /tmp/blackbox_exporter-0.14.0.linux-amd64.tar.gz
+
+    - name: Extract Blackbox Exporter
+      unarchive:
+        src: /tmp/blackbox_exporter-0.14.0.linux-amd64.tar.gz
+        dest: /tmp/
+        remote_src: yes
+
+    - name: Move Blackbox Exporter binary to /usr/local/bin
+      command:
+        cmd: mv /tmp/blackbox_exporter-0.14.0.linux-amd64/blackbox_exporter /usr/local/bin/
+        creates: /usr/local/bin/blackbox_exporter
+
+    - name: Create directory for blackbox exporter configuration
+      file:
+        path: /etc/blackbox
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Copy local blackbox_exporter.yml to /etc/blackbox/
+      copy:
+        src: ../templates/blackbox_exporter.yml
+        dest: /etc/blackbox/blackbox.yml
+        mode: '0644'
+
+    - name: Create blackbox user
+      user:
+        name: blackbox
+        shell: /bin/false
+        state: present
+
+    - name: Set ownership for Blackbox Exporter binary
+      file:
+        path: /usr/local/bin/blackbox_exporter
+        owner: blackbox
+        group: blackbox
+        mode: '0755'
+
+    - name: Set ownership for configuration directory and file
+      file:
+        path: /etc/blackbox
+        owner: blackbox
+        group: blackbox
+        recurse: yes
+
+    - name: Create systemd service for blackbox_exporter
+      copy:
+        dest: /etc/systemd/system/blackbox.service
+        content: |
+          [Unit]
+          Description=Blackbox Exporter Service
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          Type=simple
+          User=blackbox
+          Group=blackbox
+          ExecStart=/usr/local/bin/blackbox_exporter \
+            --config.file=/etc/blackbox/blackbox.yml \
+            --web.listen-address=":9115"
+
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Blackbox Exporter service
+      systemd:
+        name: blackbox.service
+        enabled: yes
+        state: started
+
+    - name: Check Blackbox Exporter service status
+      command: systemctl status blackbox.service
+      register: blackbox_status
+      failed_when: "'active (running)' not in blackbox_status.stdout"
+

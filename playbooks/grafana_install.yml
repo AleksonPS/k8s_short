@@ -1,0 +1,44 @@
+---
+- name: Install Grafana from local .deb package
+  hosts: srvserv  # Use your target host
+  vars_files:
+    - ../vars/vars_manual.yml  # Include the variables file
+    
+  become: yes
+  tasks:
+    - name: Install required dependencies
+      apt:
+        name:
+          - adduser
+          - libfontconfig1
+          - musl
+        state: present
+        update_cache: yes
+
+    - name: Copy the local .deb file to the server
+      copy:
+        src: "{{ grafana_deb_file }}" 
+        dest: /tmp/grafana-enterprise_11.3.1_amd64.deb
+        mode: '0644'
+
+    - name: Install Grafana Enterprise package
+      apt:
+        deb: /tmp/grafana-enterprise_11.3.1_amd64.deb
+
+    - name: Start and enable Grafana service
+      systemd:
+        name: grafana-server
+        state: started
+        enabled: yes
+
+#    - name: Open port 3000 in the firewall
+#      ufw:
+#        rule: allow
+#        port: '3000'
+#        proto: tcp
+#        state: enabled
+
+    - name: Restart Grafana server to apply changes
+      systemd:
+        name: grafana-server
+        state: restarted

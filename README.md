@@ -1,0 +1,1 @@
+Детали выполнения по ссылке: https://docs.google.com/document/d/10pBiqpLjKXMWGq3gBhq3aW1lctMmHTD2Z-E5_9V5jKU/edit?usp=sharing

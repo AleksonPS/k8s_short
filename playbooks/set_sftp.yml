@@ -1,0 +1,10 @@
+- name: Set setting for working with sftp
+  hosts: all
+  become: yes
+  tasks:
+    - name: Persist in /etc/sudoers 
+      lineinfile:
+        path: /etc/sudoers
+        line: 'alps ALL=NOPASSWD:/usr/lib/sftp-server'
+        state: present
+        create: true

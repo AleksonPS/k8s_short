@@ -1,0 +1,8 @@
+hosts
+*.deb
+*.log
+/log[s]
+*.retry
+tf-project/.terraform/
+tf-project/*terraform.*
+tf-project/ansible_inventory

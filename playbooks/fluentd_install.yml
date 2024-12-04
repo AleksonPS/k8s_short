@@ -1,0 +1,82 @@
+---
+- name: Install Fluentd and configure systemd service
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name: 
+          - ruby-rubygems
+          - ruby-dev
+          - build-essential
+          - libyajl-dev
+        state: present
+        update_cache: yes
+
+    - name: Install Fluentd gem
+      command: gem install fluentd
+
+    - name: Create Fluentd configuration directory
+      file:
+        path: /etc/fluentd
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create Fluentd configuration file
+      copy:
+        dest: /etc/fluentd/fluentd.conf
+        content: |
+          <source>
+            @type forward
+            port 24224
+          </source>
+
+          <match **>
+            @type stdout
+          </match>
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create Fluentd systemd service file
+      copy:
+        dest: /etc/systemd/system/fluentd.service
+        content: |
+          [Unit]
+          Description=Fluentd
+          After=network.target
+
+          [Service]
+          ExecStart=/usr/local/bin/fluentd -c /etc/fluentd/fluentd.conf
+          User=root
+          Group=root
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Reload systemd daemon
+      command: systemctl daemon-reload
+
+    - name: Start Fluentd service
+      systemd:
+        name: fluentd
+        state: started
+        enabled: yes
+
+    - name: Ensure Fluentd is running
+      command: systemctl status fluentd
+      register: service_status
+      failed_when: "'active (running)' not in service_status.stdout"
+
+  handlers:
+    - name: Restart Fluentd
+      systemd:
+        name: fluentd
+        state: restarted

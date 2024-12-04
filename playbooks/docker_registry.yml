@@ -1,0 +1,66 @@
+---
+- name: Install Docker Registry and Docker Compose
+  hosts: srvserv
+  become: yes
+
+  tasks:
+    - name: Ensure Docker is installed
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Install dependencies for Docker Compose
+      apt:
+        name: 
+          - curl
+          - jq
+        state: present
+
+    - name: Download Docker Compose binary
+      get_url:
+        url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Verify Docker Compose installation
+      shell: docker-compose --version
+      register: compose_check
+      changed_when: false
+
+    - name: Print Docker Compose version
+      debug:
+        msg: "Docker Compose version: {{ compose_check.stdout }}"
+
+    - name: Pull Docker Registry image
+      command: docker pull registry:2
+
+    - name: Create a directory for Docker Registry data
+      file:
+        path: /var/lib/registry
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Run Docker Registry container
+      docker_container:
+        name: registry
+        image: registry:2
+        state: started
+        restart_policy: always
+        ports:
+          - "5000:5000"
+        volumes:
+          - /var/lib/registry:/var/lib/registry
+
+    - name: Verify Docker Registry is running
+      shell: |
+        curl -s http://localhost:5000/v2/ || echo "Docker Registry is not reachable"
+      register: registry_check
+      failed_when: "'Docker Registry is not reachable' in registry_check.stdout"
+      changed_when: false
+
+    - name: Print Docker Registry status
+      debug:
+        msg: "Docker Registry is running and accessible at http://{{ ansible_host }}:5000"

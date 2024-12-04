@@ -1,0 +1,47 @@
+groups:
+  - name: skillfactory-alerts
+    rules:
+      - alert: DjangoStatusCodeChanged
+        expr: probe_http_status_code{instance="http://{master_ip}:30033"} != 200
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The status code of the site has changed"
+          description: "The status code of the site http://{master_ip}:30033 has changed to {{ '{{' }} $value {{ '}}' }}."
+
+      - alert: YandexStatusCodeChanged
+        expr: probe_http_status_code{instance="ya.ru"} != 200
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The status code of the site has changed"
+          description: "The status code of the site ya.ru has changed to {{ '{{' }} $value {{ '}}' }}."
+
+      - alert: ResponseTimeTooHigh
+        expr: probe_duration_seconds{instance="http://{master_ip}:30033"} > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "The response time of the site http://{master_ip}:30033 exceeds 5 seconds"
+          description: "The current response time is {{ '{{' }} $value {{ '}}' }} seconds."
+
+      - alert: ServerRebooted
+        expr: node_time_seconds{job="node_exporter"} - node_boot_time_seconds{job="node_exporter"} < 300
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "The server has been rebooted"
+          description: "The server was rebooted less than 5 minutes ago."
+
+      - alert: DiskSpaceLow
+        expr: node_filesystem_avail_bytes{job="node_exporter",fstype!="tmpfs",fstype!="devtmpfs"} < 1073741824
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space on {{ '{{' }} $labels.instance {{ '}}' }} is less than 1GB (current: {{ '{{' }} $value | humanize1024 {{ '}}' }})."
